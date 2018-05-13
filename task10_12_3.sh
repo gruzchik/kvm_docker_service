@@ -93,11 +93,6 @@ network-interfaces: |
   address ${VM1_INTERNAL_IP}
   netmask ${INTERNAL_NET_MASK}
 
-#  auto ${VXLAN_IF}
-#  iface ${VXLAN_IF} inet static
-#  address ${VM1_VXLAN_IP}
-#  vlan_raw_device ${VM1_INTERNAL_IF}
-
   auto ${VM1_MANAGEMENT_IF}
   iface ${VM1_MANAGEMENT_IF} inet static
   address ${VM1_MANAGEMENT_IP}
@@ -130,11 +125,6 @@ network-interfaces: |
   iface ${VM2_INTERNAL_IF} inet static
   address ${VM2_INTERNAL_IP}
   netmask ${INTERNAL_NET_MASK}
-
-#  auto ${VXLAN_IF}
-#  iface ${VXLAN_IF} inet static
-#  address ${VM2_VXLAN_IP}
-#  vlan_raw_device ${VM2_INTERNAL_IF}
 
   auto ${VM2_MANAGEMENT_IF}
   iface ${VM2_MANAGEMENT_IF} inet static
@@ -171,7 +161,7 @@ echo 'create vm1...'
 virt-install \
 --connect qemu:///system \
 --name ${VM1_NAME} \
---ram ${VM1_MB_RAM} --vcpus=${VM1_NUM_CPU} --hvm \
+--ram ${VM1_MB_RAM} --vcpus=${VM1_NUM_CPU} --${VM_TYPE} \
 --os-type=linux --os-variant=generic \
 --disk path=${VM1_HDD},format=qcow2,bus=virtio,cache=none \
 --disk path=${VM1_CONFIG_ISO},device=cdrom \
@@ -179,8 +169,9 @@ virt-install \
 --network network=${INTERNAL_NET_NAME} \
 --network network=${MANAGEMENT_NET_NAME} \
 --graphics vnc,port=-1 \
---noautoconsole --quiet --virt-type kvm --import
-
+--noautoconsole --quiet --virt-type "${VM_VIRT_TYPE}" --import
+echo 'wait 10 sec..'
+sleep 10
 # create vm2
 echo 'create vm2...'
 virt-install \
@@ -190,7 +181,6 @@ virt-install \
 --os-type=linux --os-variant=generic \
 --disk path=${VM2_HDD},format=qcow2,bus=virtio,cache=none \
 --disk path=${VM2_CONFIG_ISO},device=cdrom \
---network network=${EXTERNAL_NET_NAME} \
 --network network=${INTERNAL_NET_NAME} \
 --network network=${MANAGEMENT_NET_NAME} \
 --graphics vnc,port=-1 \
