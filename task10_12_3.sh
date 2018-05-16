@@ -143,9 +143,9 @@ EOF
 # user-data vm2
 cat <<EOF > ${SCRIPTPATH}/config-drives/vm2-config/user-data
 #cloud-config
-password: xenial
-chpasswd: { expire: False }
-ssh_pwauth: True
+#password: xenial
+#chpasswd: { expire: False }
+#ssh_pwauth: True
 ssh_authorized_keys:
   - $(cat  $SSH_PUB_KEY)
 runcmd:
@@ -160,7 +160,50 @@ runcmd:
   - apt-get install -y docker-ce
 EOF
 
+# generate root certificate
+[ ! -d ${SCRIPTPATH}/docker/certs ] && mkdir -p ${SCRIPTPATH}/docker/certs
+
+SSL_SCRIPTPATH="${SCRIPTPATH}/docker/certs"
+openssl genrsa -out ${SSL_SCRIPTPATH}/root-ca.key 2048
+openssl req -x509 -days 365 -new -nodes -key ${SSL_SCRIPTPATH}/root-ca.key -sha256 -out ${SSL_SCRIPTPATH}/root-ca.crt -subj "/C=UA/ST=Kharkiv/L=Kharkiv/O=Nure/OU=Admin/CN=rootCA"
+# generate nginx cert
+openssl genrsa -out ${SSL_SCRIPTPATH}/web.key 2048
+openssl req -nodes -new -sha256 -key ${SSL_SCRIPTPATH}/web.key -out ${SSL_SCRIPTPATH}/web.csr -subj "/C=UA/ST=Kharkiv/L=Kharkiv/O=Datacenter/OU=Server/CN=${VM1_NAME}"
+openssl x509 -req -extfile <(printf "subjectAltName=IP:${VM1_EXTERNAL_IP},DNS:www.${VM1_NAME}") -days 365 -in ${SSL_SCRIPTPATH}/web.csr -CA ${SSL_SCRIPTPATH}/root-ca.crt -CAkey ${SSL_SCRIPTPATH}/root-ca.key -CAcreateserial -out ${SSL_SCRIPTPATH}/web.crt
+
+# add SSL_CHAIN
+cat ${SSL_SCRIPTPATH}/web.crt ${SSL_SCRIPTPATH}/root-ca.crt > ${SSL_SCRIPTPATH}/web-bundle.crt
+cp -aR ${SCRIPTPATH}/docker/certs/* /etc/ssl/certs/
+SSL_KEY="/etc/ssl/certs/web.key"
+SSL_CHAIN="/etc/ssl/certs/web-bundle.crt"
+
+# generate nginx.conf file
+[ ! -d ${SCRIPTPATH}/docker/etc ] && mkdir -p ${SCRIPTPATH}/docker/etc
+cat <<EOF > ${SCRIPTPATH}/docker/etc/nginx.conf
+worker_processes 1;
+#daemon off;
+events {
+    worker_connections 1024;
+}
+http {
+        error_log /var/log/nginx/error.log;
+        access_log /var/log/nginx/access.log;
+        server {
+	    #listen          80;
+	    listen 80 ssl;
+            ssl on;
+            ssl_certificate ${SSL_CHAIN};
+            ssl_certificate_key ${SSL_KEY};
+            server_name     nginx;
+            location / {
+                proxy_pass  http://apache;
+            }
+        }
+}
+EOF
+
 # create iso for vm1 and vm2
+cp -aR ${SCRIPTPATH}/docker ${SCRIPTPATH}/config-drives/vm1-config/
 mkisofs -o "${VM1_CONFIG_ISO}" -V cidata -r -J ${SCRIPTPATH}/config-drives/vm1-config
 mkisofs -o "${VM2_CONFIG_ISO}" -V cidata -r -J ${SCRIPTPATH}/config-drives/vm2-config
 
@@ -178,8 +221,8 @@ virt-install \
 --network network=${MANAGEMENT_NET_NAME} \
 --graphics vnc,port=-1 \
 --noautoconsole --quiet --virt-type "${VM_VIRT_TYPE}" --import
-echo 'wait 10 sec..'
-sleep 10
+#echo 'wait 10 sec..'
+#sleep 10
 # create vm2
 echo 'create vm2...'
 virt-install \
