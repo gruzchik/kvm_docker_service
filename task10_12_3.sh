@@ -118,6 +118,8 @@ runcmd:
   - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
   - apt-get update
   - apt-get install -y docker-ce
+  - mount /dev/cdrom /mnt
+  - docker run -t -i -d -p ${NGINX_PORT}:80 --name mir_nginx -v /mnt/docker/certs:/etc/ssl/certs -v /mnt/docker/etc/nginx.conf:/etc/nginx/nginx.conf ${NGINX_IMAGE}
 EOF
 
 # starting configuration for vm2
@@ -158,6 +160,7 @@ runcmd:
   - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
   - apt-get update
   - apt-get install -y docker-ce
+  - docker run -t -i -d -p ${APACHE_PORT}:80 --name mir_apache ${APACHE_IMAGE}
 EOF
 
 # generate root certificate
@@ -196,7 +199,7 @@ http {
             ssl_certificate_key ${SSL_KEY};
             server_name     nginx;
             location / {
-                proxy_pass  http://apache;
+                proxy_pass  http://${VM2_VXLAN_IP}:${APACHE_PORT};
             }
         }
 }
