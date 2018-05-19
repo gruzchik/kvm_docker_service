@@ -118,8 +118,10 @@ runcmd:
   - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
   - apt-get update
   - apt-get install -y docker-ce
+  - hostname vm1
   - mount /dev/cdrom /mnt
-  - docker run -t -i -d -p ${NGINX_PORT}:80 --name mir_nginx -v /mnt/docker/certs:/etc/ssl/certs -v /mnt/docker/etc/nginx.conf:/etc/nginx/nginx.conf ${NGINX_IMAGE}
+  - cp -aR /mnt/docker/certs/* /etc/ssl/certs/
+  - docker run -t -i -d -p ${NGINX_PORT}:80 --name mir_nginx -v /etc/ssl/certs:/etc/ssl/certs -v /mnt/docker/etc/nginx.conf:/etc/nginx/nginx.conf -v ${NGINX_LOG_DIR}:/var/log/nginx ${NGINX_IMAGE}
 EOF
 
 # starting configuration for vm2
