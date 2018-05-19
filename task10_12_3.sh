@@ -226,8 +226,8 @@ virt-install \
 --network network=${MANAGEMENT_NET_NAME} \
 --graphics vnc,port=-1 \
 --noautoconsole --quiet --virt-type "${VM_VIRT_TYPE}" --import
-#echo 'wait 10 sec..'
-#sleep 10
+echo 'wait 10 sec..'
+sleep 10
 # create vm2
 echo 'create vm2...'
 virt-install \
