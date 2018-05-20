@@ -83,7 +83,8 @@ cp -f /var/lib/libvirt/images/xenial-server-cloudimg-amd64-disk1-template.qcow2 
 # meta-data vm1
 cat <<EOF > ${SCRIPTPATH}/config-drives/vm1-config/meta-data
 instance-id: iid-abcdefg
-hostname: vm1
+hostname: ${VM1_NAME}
+local-hostname: ${VM1_NAME}
 network-interfaces: |
 
   auto ${VM1_EXTERNAL_IF}
@@ -118,7 +119,6 @@ runcmd:
   - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
   - apt-get update
   - apt-get install -y docker-ce
-  - hostname vm1
   - mount /dev/cdrom /mnt
   - cp -aR /mnt/docker/certs/* /etc/ssl/certs/
   - docker run -t -i -d -p ${NGINX_PORT}:80 --name mir_nginx -v /etc/ssl/certs:/etc/ssl/certs -v /mnt/docker/etc/nginx.conf:/etc/nginx/nginx.conf -v ${NGINX_LOG_DIR}:/var/log/nginx ${NGINX_IMAGE}
@@ -129,7 +129,8 @@ EOF
 # meta-data vm2
 cat <<EOF > ${SCRIPTPATH}/config-drives/vm2-config/meta-data
 instance-id: iid2-abcdefg
-hostname: vm2
+hostname: ${VM2_NAME}
+local-hostname: ${VM2_NAME}
 network-interfaces: |
   auto ${VM2_INTERNAL_IF}
   iface ${VM2_INTERNAL_IF} inet static
